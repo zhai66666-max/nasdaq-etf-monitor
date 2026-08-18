@@ -1,10 +1,11 @@
 """HTML 报告生成"""
 import os
 from jinja2 import Environment, FileSystemLoader
-from datetime import date
+from datetime import datetime, timedelta, timezone
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TEMPLATES = os.path.join(BASE_DIR, 'templates')
+BEIJING_TZ = timezone(timedelta(hours=8))
 
 
 def generate_html(context):
@@ -18,7 +19,7 @@ def generate_html(context):
 def build_context(dd_summary, ranked_etfs, signal, ndx_meta, data_status, basis_label):
     """构建模板上下文"""
     return {
-        'report_date': date.today().isoformat(),
+        'report_date': datetime.now(BEIJING_TZ).date().isoformat(),
         'dd': dd_summary,
         'ranked': ranked_etfs,
         'signal': signal,

@@ -6,7 +6,7 @@
 import sys
 import os
 import traceback
-from datetime import date
+from datetime import datetime, timedelta, timezone
 
 # 允许直接 python main.py 运行
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -14,9 +14,16 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from src import data_fetcher, drawdown, etf, ranking, database, report, email_sender
 from src import config_loader
 
+BEIJING_TZ = timezone(timedelta(hours=8))
+
+
+def beijing_today():
+    """北京时间日期（GitHub Actions 服务器是 UTC）"""
+    return datetime.now(BEIJING_TZ).date()
+
 
 def main(send=True):
-    run_date = date.today().isoformat()
+    run_date = beijing_today().isoformat()
     logs = []
 
     # ===== 1. 纳斯达克100 历史数据 =====

@@ -31,8 +31,10 @@ def init_db(conn):
             PRIMARY KEY (run_date, code)
         )
     """)
+    # 兼容旧版单主键 schema，重建
+    conn.execute('DROP TABLE IF EXISTS drawdown_events')
     conn.execute("""
-        CREATE TABLE IF NOT EXISTS drawdown_events (
+        CREATE TABLE drawdown_events (
             event_id INTEGER,
             run_date DATE,
             threshold DOUBLE,
