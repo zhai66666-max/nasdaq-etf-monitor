@@ -1,0 +1,44 @@
+name: Nasdaq ETF Monitor Daily
+
+on:
+  schedule:
+    # 每天北京时间 07:00（UTC 前一天 23:00）
+    - cron: '0 23 * * *'
+  workflow_dispatch:
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run monitor
+        env:
+          EMAIL_HOST: ${{ secrets.EMAIL_HOST }}
+          EMAIL_PORT: ${{ secrets.EMAIL_PORT }}
+          EMAIL_USERNAME: ${{ secrets.EMAIL_USERNAME }}
+          EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+          EMAIL_TO: ${{ secrets.EMAIL_TO }}
+        run: python main.py
+
+      - name: Commit data updates
+        run: |
+          git config user.name "nasdaq-monitor-bot"
+          git config user.email "bot@monitor.local"
+          git add data/*.duckdb data/report_*.html 2>/dev/null || true
+          if git diff --staged --quiet; then
+            echo "No data changes"
+          else
+            git commit -m "data: daily update $(date -u +%Y-%m-%d)"
+            git push
+          fi
