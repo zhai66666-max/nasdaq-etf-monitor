@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>纳斯达克100每日监控</title>
+</head>
+<body style="margin:0;padding:0;background:#f5f6fa;font-family:'PingFang SC','Microsoft YaHei',Helvetica,Arial,sans-serif;color:#2c3e50;">
+<div style="max-width:640px;margin:0 auto;padding:20px 12px;">
+
+  <!-- ===== 顶部核心摘要 ===== -->
+  <div style="background:#1a1a2e;border-radius:14px;padding:26px 20px;color:#fff;text-align:center;">
+    <div style="font-size:13px;letter-spacing:3px;color:#8892b0;margin-bottom:6px;">━━━━━━━━━━━━━━━━━━━━</div>
+    <div style="font-size:22px;font-weight:700;margin-bottom:4px;">📊 纳斯达克100每日监控</div>
+    <div style="font-size:14px;color:#8892b0;margin-bottom:20px;">{{ report_date }}</div>
+
+    <table style="width:100%;font-size:15px;border-collapse:collapse;">
+      <tr>
+        <td style="padding:8px 4px;color:#8892b0;text-align:left;">纳指当前历史回撤</td>
+        <td style="padding:8px 4px;text-align:right;font-weight:700;font-size:20px;color:#ff6b6b;">{{ "%.2f"|format(dd.current_drawdown) }}%</td>
+      </tr>
+      <tr>
+        <td style="padding:8px 4px;color:#8892b0;text-align:left;">历史回撤百分位</td>
+        <td style="padding:8px 4px;text-align:right;font-weight:700;">{{ "%.0f"|format(dd.percentile) }}%</td>
+      </tr>
+      <tr>
+        <td style="padding:8px 4px;color:#8892b0;text-align:left;">历史最大回撤</td>
+        <td style="padding:8px 4px;text-align:right;font-weight:700;color:#ff6b6b;">{{ "%.1f"|format(dd.max_dd.max_drawdown) }}%</td>
+      </tr>
+      <tr>
+        <td style="padding:8px 4px;color:#8892b0;text-align:left;">国内纳指ETF最低溢价</td>
+        <td style="padding:8px 4px;text-align:right;font-weight:700;">{% if signal.best_etf %}{{ signal.best_etf.premium_level.emoji }} {{ "%.2f"|format(signal.best_etf.premium) }}%{% else %}—{% endif %}</td>
+      </tr>
+      <tr>
+        <td style="padding:8px 4px;color:#8892b0;text-align:left;">最佳ETF</td>
+        <td style="padding:8px 4px;text-align:right;font-weight:700;">{% if signal.best_etf %}{{ signal.best_etf.code }} {{ signal.best_etf.short_name }}{% else %}—{% endif %}</td>
+      </tr>
+    </table>
+    <div style="font-size:13px;color:#8892b0;margin-top:14px;">━━━━━━━━━━━━━━━━━━━━</div>
+  </div>
+
+  <!-- ===== 今日判断 ===== -->
+  <div style="background:#fff;border-radius:14px;padding:20px;margin-top:14px;border:2px solid {% if signal.satisfied %}#4caf50{% else %}#e0e0e0{% endif %};">
+    <div style="font-size:16px;font-weight:700;margin-bottom:12px;">今日判断</div>
+    {% if dd.current_drawdown <= -10 %}
+    <div style="padding:6px 0;">🟢 纳指已进入{% if dd.current_drawdown <= -30 %}极端{% elif dd.current_drawdown <= -20 %}重大{% elif dd.current_drawdown <= -15 %}较大{% else %}中等{% endif %}历史回撤区间（{{ dd.level.emoji }} {{ dd.level.label }}）</div>
+    {% else %}
+    <div style="padding:6px 0;">⚪ 纳指当前处于{{ dd.level.emoji }} {{ dd.level.label }}，未进入加仓区间</div>
+    {% endif %}
+    {% if signal.premium_ok %}
+    <div style="padding:6px 0;">🟢 场内ETF溢价 ≤2%，价格合理</div>
+    {% else %}
+    <div style="padding:6px 0;">🔴 暂无溢价 ≤2% 的场内ETF</div>
+    {% endif %}
+    <div style="margin-top:10px;font-size:15px;font-weight:700;">
+      {% if signal.satisfied %}
+      → 🟢 满足预设加仓条件
+      {% else %}
+      → ⚪ 未满足加仓条件，继续观察
+      {% endif %}
+    </div>
+    {% if signal.matrix %}
+    <div style="margin-top:6px;font-size:13px;color:#888;">矩阵区间：{{ signal.matrix.signal }}</div>
+    {% endif %}
+  </div>
+
+  <!-- ===== ETF 排名 ===== -->
+  <div style="background:#fff;border-radius:14px;padding:20px;margin-top:14px;">
+    <div style="font-size:16px;font-weight:700;margin-bottom:12px;">🏆 ETF 溢价排名</div>
+    <table style="width:100%;font-size:13px;border-collapse:collapse;">
+      <tr style="background:#f0f2f7;color:#666;">
+        <th style="padding:8px 4px;text-align:left;">排名</th>
+        <th style="padding:8px 4px;text-align:left;">ETF</th>
+        <th style="padding:8px 4px;text-align:right;">价格</th>
+        <th style="padding:8px 4px;text-align:right;">溢价</th>
+        <th style="padding:8px 4px;text-align:right;">成交额</th>
+        <th style="padding:8px 4px;text-align:center;">状态</th>
+      </tr>
+      {% for e in ranked %}
+      <tr style="border-bottom:1px solid #f0f2f7;">
+        <td style="padding:8px 4px;">{{ loop.index }}</td>
+        <td style="padding:8px 4px;">{{ e.code }} {{ e.short_name }}</td>
+        <td style="padding:8px 4px;text-align:right;">{{ "%.3f"|format(e.price) if e.price else "—" }}</td>
+        <td style="padding:8px 4px;text-align:right;font-weight:600;">{{ "%.2f"|format(e.premium) if e.premium is not none else "—" }}%</td>
+        <td style="padding:8px 4px;text-align:right;">{{ (e.amount/100000000)|round(2) if e.amount else "—" }}亿{% if e.low_liquidity %} ⚠️{% endif %}</td>
+        <td style="padding:8px 4px;text-align:center;">{{ e.premium_level.emoji }} {{ e.premium_level.label }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+    <div style="font-size:12px;color:#999;margin-top:8px;">
+      溢价基于 {{ basis_label }}；⚠️ = 流动性较低；数据时间 {{ data_status }}
+    </div>
+  </div>
+
+  <!-- ===== 历史回撤统计 ===== -->
+  <div style="background:#fff;border-radius:14px;padding:20px;margin-top:14px;">
+    <div style="font-size:16px;font-weight:700;margin-bottom:12px;">📉 纳指历史回撤统计</div>
+    <table style="width:100%;font-size:14px;border-collapse:collapse;">
+      <tr><td style="padding:6px 0;color:#666;">当前回撤</td><td style="padding:6px 0;text-align:right;font-weight:600;">{{ "%.2f"|format(dd.current_drawdown) }}%</td></tr>
+      <tr><td style="padding:6px 0;color:#666;">历史百分位</td><td style="padding:6px 0;text-align:right;font-weight:600;">{{ "%.0f"|format(dd.percentile) }}%</td></tr>
+      <tr><td style="padding:6px 0;color:#666;">历史最大回撤</td><td style="padding:6px 0;text-align:right;font-weight:600;color:#e53935;">{{ "%.2f"|format(dd.max_dd.max_drawdown) }}%</td></tr>
+      <tr><td style="padding:6px 0;color:#666;">最大回撤发生</td><td style="padding:6px 0;text-align:right;">{{ dd.max_dd.peak_date }} → {{ dd.max_dd.bottom_date }}</td></tr>
+      {% if dd.max_dd.recovery_date %}
+      <tr><td style="padding:6px 0;color:#666;">最大回撤恢复</td><td style="padding:6px 0;text-align:right;">{{ dd.max_dd.recovery_date }}</td></tr>
+      {% endif %}
+      <tr><td style="padding:6px 0;color:#666;">当前回撤等级</td><td style="padding:6px 0;text-align:right;">{{ dd.level.emoji }} {{ dd.level.label }}</td></tr>
+    </table>
+    <div style="margin-top:14px;font-size:13px;color:#666;">
+      最近一次跌破各阈值：<br>
+      {% for th, dt in dd.recent_thresholds.items() %}
+      {{ th }}%：{{ dt }}<br>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- ===== 数据状态 ===== -->
+  <div style="background:#fff;border-radius:14px;padding:16px 20px;margin-top:14px;font-size:12px;color:#888;">
+    <div style="font-weight:700;color:#555;margin-bottom:6px;">📡 数据状态</div>
+    {{ data_status }}<br>
+    纳斯达克数据源：{{ ndx_source }}（{{ ndx_count }} 条日线）<br>
+    本报告由纳斯达克ETF监控系统自动生成，仅提供数据判断，不构成投资建议，不自动交易。
+  </div>
+
+</div>
+</body>
+</html>
