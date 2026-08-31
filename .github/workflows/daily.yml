@@ -2,8 +2,8 @@ name: Nasdaq ETF Monitor Daily
 
 on:
   schedule:
-    # 每天北京时间 07:00（UTC 前一天 23:00）
-    - cron: '0 23 * * *'
+    # 每天北京时间 07:21（UTC 前一天 23:21）
+    - cron: '21 23 * * *'
   workflow_dispatch:
 
 permissions:

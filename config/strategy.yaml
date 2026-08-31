@@ -59,6 +59,9 @@ premium_levels:
 # 默认规则：溢价率阈值（%），≤此值视为可接受
 premium_accept_max: 2.0
 
+# 加仓回撤阈值（%）：历史回撤 ≤ 此值时视为进入加仓区间（ranking.py 使用）
+add_zone_drawdown: -10.0
+
 # 历史回撤 × ETF溢价 综合矩阵
 # 匹配规则：回撤落在 drawdown_range 内 且 最低可买ETF溢价 ≤ premium_max
 matrix:

@@ -35,8 +35,8 @@ def build_signal(drawdown_summary, ranked_etfs, premium_accept_max):
                               min_premium_etf['premium'] if min_premium_etf else None,
                               strategy['matrix'])
 
-    # 回撤条件：是否进入历史加仓区间（回撤 < -10%）
-    dd_in_zone = current_dd <= -10.0
+    # 回撤条件：是否进入历史加仓区间（阈值从 strategy.yaml 读取）
+    dd_in_zone = current_dd <= strategy['add_zone_drawdown']
 
     signals = {
         'dd_in_zone': dd_in_zone,

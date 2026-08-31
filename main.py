@@ -81,10 +81,21 @@ def main(send=True):
     context = report.build_context(dd, ranked, signal, ndx_meta, data_status, basis_label)
     html = report.generate_html(context)
 
-    # 保存 HTML 供存档
+    # 保存 HTML 供存档（仅保留最近 30 天，防止 data/ 无限膨胀）
     os.makedirs('data', exist_ok=True)
     with open(f'data/report_{run_date}.html', 'w', encoding='utf-8') as f:
         f.write(html)
+
+    RETENTION_DAYS = 30
+    cutoff = beijing_today() - timedelta(days=RETENTION_DAYS)
+    for old in os.listdir('data'):
+        if old.startswith('report_') and old.endswith('.html'):
+            try:
+                old_date = datetime.strptime(old[7:17], '%Y-%m-%d').date()
+            except ValueError:
+                continue
+            if old_date < cutoff:
+                os.remove(os.path.join('data', old))
 
     # ===== 8. 发送邮件 =====
     email_status = '跳过'

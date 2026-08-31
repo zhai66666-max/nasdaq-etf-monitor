@@ -31,26 +31,32 @@ def init_db(conn):
             PRIMARY KEY (run_date, code)
         )
     """)
-    # 兼容旧版单主键 schema，重建
-    conn.execute('DROP TABLE IF EXISTS drawdown_events')
-    conn.execute("""
-        CREATE TABLE drawdown_events (
-            event_id INTEGER,
-            run_date DATE,
-            threshold DOUBLE,
-            start_date VARCHAR, bottom_date VARCHAR, recovery_date VARCHAR,
-            max_drawdown DOUBLE, duration_days INTEGER, recovery_days INTEGER,
-            PRIMARY KEY (run_date, event_id)
-        )
-    """)
+    # drawdown_events：仅当旧版 schema（单主键 run_date，无 event_id 列）时迁移重建一次，
+    # 之后保留历史事件，不再每次 DROP。
+    rows = conn.execute("""
+        SELECT column_name FROM information_schema.columns
+        WHERE table_name = 'drawdown_events' AND column_name = 'event_id'
+    """).fetchall()
+    if not rows:
+        # 表不存在或为旧版 schema → 迁移重建
+        conn.execute('DROP TABLE IF EXISTS drawdown_events')
+        conn.execute("""
+            CREATE TABLE drawdown_events (
+                event_id INTEGER,
+                run_date DATE,
+                threshold DOUBLE,
+                start_date VARCHAR, bottom_date VARCHAR, recovery_date VARCHAR,
+                max_drawdown DOUBLE, duration_days INTEGER, recovery_days INTEGER,
+                PRIMARY KEY (run_date, event_id)
+            )
+        """)
 
 
 def save_nasdaq(conn, df):
-    """保存纳斯达克日线（含回撤列），全量刷新"""
+    """保存纳斯达克日线（含回撤列），按日期增量 upsert，避免全量 DELETE 导致 duckdb 文件膨胀"""
     conn.register('ndx_df', df)
-    conn.execute('DELETE FROM nasdaq_daily')
     conn.execute("""
-        INSERT INTO nasdaq_daily
+        INSERT OR REPLACE INTO nasdaq_daily
         SELECT date::DATE, open, high, low, close, volume, peak, drawdown
         FROM ndx_df
     """)
