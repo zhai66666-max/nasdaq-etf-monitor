@@ -6,6 +6,15 @@ from email.mime.multipart import MIMEMultipart
 from email.header import Header
 
 
+# 收件人黑名单：命中的地址永不接收邮件（2026-09-17 起停发 1741534484@qq.com）
+# 如需调整，用环境变量 EMAIL_BLOCKLIST 覆盖（英文逗号分隔）
+BLOCKED_RECIPIENTS = frozenset(
+    e.strip().lower()
+    for e in os.environ.get('EMAIL_BLOCKLIST', '1741534484@qq.com').split(',')
+    if e.strip()
+)
+
+
 def send_email(html_content, subject):
     """发送 HTML 邮件。凭证从环境变量读取。"""
     host = os.environ.get('EMAIL_HOST', 'smtp.qq.com')
@@ -17,7 +26,13 @@ def send_email(html_content, subject):
     if not all([username, password, to]):
         raise ValueError('邮件配置不完整（EMAIL_HOST/PORT/USERNAME/PASSWORD/TO）')
 
-    recipients = [e.strip() for e in to.split(',') if e.strip()]
+    configured = [e.strip() for e in to.split(',') if e.strip()]
+    recipients = [e for e in configured if e.lower() not in BLOCKED_RECIPIENTS]
+    skipped = len(configured) - len(recipients)
+    if skipped:
+        print(f'黑名单已过滤 {skipped} 个收件人')
+    if not recipients:
+        raise ValueError('收件人全部位于黑名单，邮件未发送')
 
     msg = MIMEMultipart('alternative')
     msg['Subject'] = Header(subject, 'utf-8')

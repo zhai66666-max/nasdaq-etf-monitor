@@ -106,7 +106,7 @@ def main(send=True):
                    else f'[纳指监控] {run_date} 历史回撤 {dd["current_drawdown"]:.2f}%')
         try:
             recipients = email_sender.send_email(html, subject)
-            email_status = f'成功 → {", ".join(recipients)}'
+            email_status = f'成功 → {len(recipients)} 个收件人'
         except Exception as e:
             email_status = f'失败: {e}'
     logs.append(f'邮件: {email_status}')
